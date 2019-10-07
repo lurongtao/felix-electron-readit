@@ -1,6 +1,12 @@
+const fs = require('fs')
 
 // DOM nodes
 let items = document.getElementById('items')
+
+let readerJS
+fs.readFile(`${__dirname}/reader.js`, (err, data) => {
+  readerJS = data.toString()
+})
 
 // Track items in storage
 exports.storage = JSON.parse(localStorage.getItem('readit-items')) || []
@@ -49,7 +55,18 @@ exports.open = () => {
   // Get item's url
   let contentURL = selectedItem.dataset.url
 
-  console.log('Opening item: ', contentURL)
+  let readerWin = window.open(contentURL, '', `
+    maxWidth=2000,
+    maxheight=2000,
+    width=1200,
+    height=800,
+    backgroundColor=#DEDEDE,
+    nodeIntegration=0,
+    contextIsolation=1
+  `)
+
+  // Inject JavaScript
+  readerWin.eval(readerJS)
 }
 
 // Add new item
