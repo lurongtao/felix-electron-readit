@@ -1,67 +1,61 @@
-// Modules to control application life and create native browser window
-const {app, BrowserWindow} = require('electron')
-const path = require('path')
+// Modules
+const {app, BrowserWindow, ipcMain} = require('electron')
 const windowStateKeeper = require('electron-window-state')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
+// Listen for new item request
+ipcMain.on('new-item', (e, itemUrl) => {
+  
+  // Get new item and send back to renderer
+  setTimeout(() => {
+    e.sender.send('new-item-success', 'New item from main process')
+  }, 2000)
+})
+
+// Create a new BrowserWindow when `app` is ready
 function createWindow () {
 
-  // win state keeper
+  // Win state keeper
   let state = windowStateKeeper({
-    defaultWidth: 500,
-    defaultHeight: 650
+    defaultWidth: 850, defaultHeight: 650
   })
 
-  // Create the browser window.
   mainWindow = new BrowserWindow({
-    x: state.x,
-    y: state.y,
-    width: state.width,
-    height: state.height,
-    minWidth: 350,
-    maxWidth: 650,
-    minHeight: 300,
+    x: state.x, y: state.y,
+    width: state.width, height: state.height,
+    minWidth: 350, maxWidth: 850, minHeight: 300,
     webPreferences: {
       nodeIntegration: true
     }
   })
 
-  // and load the index.html of the app.
+  // Load index.html into the new BrowserWindow
   mainWindow.loadFile('renderer/main.html')
 
   // Manage new window state
   state.manage(mainWindow)
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+  // Open DevTools - Remove for PRODUCTION!
+  mainWindow.webContents.openDevTools();
 
-  // Emitted when the window is closed.
-  mainWindow.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
+  // Listen for window being closed
+  mainWindow.on('closed',  () => {
     mainWindow = null
   })
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+// Electron `app` is ready
 app.on('ready', createWindow)
 
-// Quit when all windows are closed.
-app.on('window-all-closed', function () {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
+// Quit when all windows are closed - (Not macOS - Darwin)
+app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('activate', function () {
+// When app icon is clicked and app is running, (macOS) recreate the BrowserWindow
+app.on('activate', () => {
   if (mainWindow === null) createWindow()
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
