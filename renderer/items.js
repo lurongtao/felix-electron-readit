@@ -11,6 +11,43 @@ fs.readFile(`${__dirname}/reader.js`, (err, data) => {
 // Track items in storage
 exports.storage = JSON.parse(localStorage.getItem('readit-items')) || []
 
+// Listen for "Done" message from reader window
+window.addEventListener('message', e => {
+
+  // Check for correct message
+  if (e.data.action === 'delete-reader-item') {
+
+    // Delete item at given index
+    this.delete(e.data.itemIndex)
+
+    // Close the reader window
+    e.source.close()
+  }
+})
+
+// Delete item
+exports.delete = itemIndex => {
+
+  // Remove item from DOM
+  items.removeChild( items.childNodes[itemIndex] )
+
+  // Remove from storage
+  this.storage.splice(itemIndex, 1)
+
+  // Persist
+  this.save()
+
+  // Select previous item or new first item if first was deleted
+  if (this.storage.length) {
+
+    // Get new selected item index
+    let newSelectedItemIndex = (itemIndex === 0) ? 0 : itemIndex - 1
+
+    // Set item at new index as selected
+    document.getElementsByClassName('read-item')[newSelectedItemIndex].classList.add('selected')
+  }
+}
+
 // Persist storage
 exports.save = () => {
   localStorage.setItem('readit-items', JSON.stringify(this.storage))
@@ -20,7 +57,7 @@ exports.save = () => {
 exports.select = e => {
 
   // Remove currently selected item class
-  document.getElementsByClassName('read-item selected')[0].classList.remove('selected')
+  this.getSelectedItem().node.classList.remove('selected')
 
   // Add to clicked item
   e.currentTarget.classList.add('selected')
@@ -30,7 +67,7 @@ exports.select = e => {
 exports.changeSelection = direction => {
 
   // Get selected item
-  let currentItem = document.getElementsByClassName('read-item selected')[0]
+  let currentItem = this.getSelectedItem().node
 
   // Handle up/down
   if (direction === 'ArrowUp' && currentItem.previousSibling) {
@@ -50,10 +87,10 @@ exports.open = () => {
   if( !this.storage.length ) return
 
   // Get selected item
-  let selectedItem = document.getElementsByClassName('read-item selected')[0]
+  let selectedItem = this.getSelectedItem()
 
   // Get item's url
-  let contentURL = selectedItem.dataset.url
+  let contentURL = selectedItem.node.dataset.url
 
   let readerWin = window.open(contentURL, '', `
     maxWidth=2000,
@@ -66,7 +103,22 @@ exports.open = () => {
   `)
 
   // Inject JavaScript
-  readerWin.eval(readerJS)
+  readerWin.eval(readerJS.replace('{{index}}', selectedItem.index))
+}
+
+// Get selected item index
+exports.getSelectedItem = () => {
+
+  // Get selected node
+  let currentItem = document.getElementsByClassName('read-item selected')[0]
+
+  // Get item index
+  let itemIndex = 0
+  let child = currentItem
+  while( (child = child.previousSibling) != null ) itemIndex++
+
+  // Return selected item and index
+  return { node: currentItem, index: itemIndex }
 }
 
 // Add new item
